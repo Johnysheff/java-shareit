@@ -11,13 +11,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class InMemoryItemService implements ItemService {
+public class InMemoryItemRepository implements ItemRepository {
 
     private final Map<Long, Item> items = new HashMap<>();
     private final UserService userService;
     private long nextId = 1L;
 
-    public InMemoryItemService(UserService userService) {
+    public InMemoryItemRepository(UserService userService) {
         this.userService = userService;
     }
 
