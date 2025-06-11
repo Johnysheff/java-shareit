@@ -9,17 +9,23 @@ import static lombok.AccessLevel.PRIVATE;
 
 @NoArgsConstructor(access = PRIVATE)
 public class ItemMapper {
-    public static Item toItem(ItemCreateDto dto, Long ownerId) {
-        return new Item(null, dto.getName(), dto.getDescription(), dto.getAvailable(), ownerId, dto.getRequestId());
+    public static Item toItem(ItemCreateDto dto) {
+        Item item = new Item();
+        item.setName(dto.getName());
+        item.setDescription(dto.getDescription());
+        item.setAvailable(dto.getAvailable());
+        return item;
     }
 
     public static ItemDto toItemDto(Item item) {
-        return new ItemDto(
-                item.getId(),
-                item.getName(),
-                item.getDescription(),
-                item.getAvailable(),
-                item.getRequestId()
-        );
+        ItemDto dto = new ItemDto();
+        dto.setId(item.getId());
+        dto.setName(item.getName());
+        dto.setDescription(item.getDescription());
+        dto.setAvailable(item.getAvailable());
+        if (item.getRequest() != null) {
+            dto.setRequestId(item.getRequest().getId());
+        }
+        return dto;
     }
 }

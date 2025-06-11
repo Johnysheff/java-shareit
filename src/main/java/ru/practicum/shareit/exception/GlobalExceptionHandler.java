@@ -14,7 +14,21 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({IllegalArgumentException.class})
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(NotFoundException ex) {
+        log.warn("Объект не найден: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenException ex) {
+        log.warn("Доступ запрещен: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, ValidationException.class})
     public ResponseEntity<Map<String, String>> handleBadRequest(Exception ex) {
         String message = ex.getMessage();
 
@@ -22,18 +36,6 @@ public class GlobalExceptionHandler {
             log.warn("Ошибка: {}", message);
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", message));
-        }
-
-        if (message.equals("вещь не найдена") || message.equals("пользователя не существует")) {
-            log.warn("Ошибка: {}", message);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Запрашиваемый объект не найден"));
-        }
-
-        if (message.equals("только владелец может обновить вещь")) {
-            log.warn("Ошибка: {}", message);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Обновлять вещь может только её владелец"));
         }
 
         log.error("Некорректный запрос: {}", message);
