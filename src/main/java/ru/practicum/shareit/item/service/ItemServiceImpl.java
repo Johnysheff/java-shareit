@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.CommentRepository;
@@ -23,8 +24,9 @@ import ru.practicum.shareit.user.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -87,11 +89,15 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public ItemDto getItemById(Long itemId) {
         Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new NotFoundException("вещь не найдена"));
+                .orElseThrow(() -> new NotFoundException("Вещь не найдена"));
 
         ItemDto itemDto = ItemMapper.toItemDto(item);
         addBookingDates(itemDto, item.getId());
-        addComments(itemDto, item.getId());
+
+        List<Comment> comments = commentRepository.findByItemId(itemId);
+        itemDto.setComments(comments.stream()
+                .map(CommentMapper::toCommentDto)
+                .collect(Collectors.toList()));
 
         return itemDto;
     }
@@ -99,14 +105,32 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public List<ItemDto> getAllItemsByOwnerId(Long ownerId) {
         List<Item> items = itemRepository.findByOwnerId(ownerId);
-        return items.stream()
-                .map(item -> {
-                    ItemDto dto = ItemMapper.toItemDto(item);
-                    addBookingDates(dto, item.getId());
-                    addComments(dto, item.getId());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        List<Long> itemIds = items.stream().map(Item::getId).collect(Collectors.toList());
+
+        Map<Long, List<Booking>> bookingsMap = bookingRepository.findByItemIdIn(itemIds)
+                .stream()
+                .collect(Collectors.groupingBy(b -> b.getItem().getId()));
+
+        Map<Long, List<Comment>> commentsMap = commentRepository.findByItemIdIn(itemIds)
+                .stream()
+                .collect(Collectors.groupingBy(c -> c.getItem().getId()));
+
+        return items.stream().map(item -> {
+            ItemDto dto = ItemMapper.toItemDto(item);
+
+            List<Booking> itemBookings = bookingsMap.getOrDefault(item.getId(), Collections.emptyList());
+            itemBookings.forEach(booking -> {
+            });
+
+            addBookingDates(dto, item.getId());
+
+            dto.setComments(commentsMap.getOrDefault(item.getId(), Collections.emptyList())
+                    .stream()
+                    .map(CommentMapper::toCommentDto)
+                    .collect(Collectors.toList()));
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -150,36 +174,16 @@ public class ItemServiceImpl implements ItemService {
         return CommentMapper.toCommentDto(savedComment);
     }
 
-    private void addBookingDates(ItemDto itemDto, Long itemId) {
+    private void addBookingDates(ItemDto dto, Long itemId) {
+        dto.setLastBooking(null);
         LocalDateTime now = LocalDateTime.now();
+        List<Booking> bookings = bookingRepository.findByItemIdAndStatus(itemId, BookingStatus.APPROVED);
 
-        Optional<Booking> lastBooking = bookingRepository
-                .findFirstByItemIdAndStartBeforeOrderByStartDesc(itemId, now);
-
-        Optional<Booking> nextBooking = bookingRepository
-                .findFirstByItemIdAndStartAfterOrderByStartAsc(itemId, now);
-
-        if (lastBooking.isPresent() && lastBooking.get().getEnd().isAfter(now)) {
-            itemDto.setLastBooking(
-                    new ItemDto.BookingShortDto(
-                            lastBooking.get().getId(),
-                            lastBooking.get().getBooker().getId()
-                    )
-            );
-        } else {
-            itemDto.setLastBooking(null);
-        }
-
-        if (nextBooking.isPresent()) {
-            itemDto.setNextBooking(
-                    new ItemDto.BookingShortDto(
-                            nextBooking.get().getId(),
-                            nextBooking.get().getBooker().getId()
-                    )
-            );
-        } else {
-            itemDto.setNextBooking(null);
-        }
+        dto.setNextBooking(bookings.stream()
+                .filter(b -> b.getStart().isAfter(now))
+                .min(Comparator.comparing(Booking::getStart))
+                .map(b -> new ItemDto.BookingShortDto(b.getId(), b.getBooker().getId()))
+                .orElse(null));
     }
 
     private void addComments(ItemDto itemDto, Long itemId) {
