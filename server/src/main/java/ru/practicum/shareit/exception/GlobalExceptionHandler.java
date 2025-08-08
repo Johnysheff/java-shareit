@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    public ResponseEntity<Map<String, String>> handleValidationExceptions() {
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String errorMessage = "Ошибка валидации данных";
         log.warn(errorMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
