@@ -1,10 +1,8 @@
 package ru.practicum.shareit.exception;
 
-import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -41,14 +39,6 @@ public class GlobalExceptionHandler {
         log.error("Некорректный запрос: {}", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", message));
-    }
-
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = "Ошибка валидации данных";
-        log.warn(errorMessage);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", errorMessage));
     }
 
     @ExceptionHandler(Exception.class)

@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemCreateDto;
 
+import java.util.Collections;
+
 @Controller
 @RequestMapping("/items")
 @RequiredArgsConstructor
@@ -55,11 +57,15 @@ public class ItemController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Object> searchItems(
-            @RequestParam String text,
-            @PositiveOrZero @RequestParam(defaultValue = "0") Integer from,
-            @Positive @RequestParam(defaultValue = "10") Integer size) {
+    public ResponseEntity<Object> searchItems(@RequestParam String text,
+                                              @PositiveOrZero @RequestParam(defaultValue = "0") Integer from,
+                                              @Positive @RequestParam(defaultValue = "10") Integer size) {
         log.info("Search items by text '{}', from={}, size={}", text, from, size);
+
+        if (text == null || text.trim().isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
         return itemClient.searchItems(text, from, size);
     }
 
